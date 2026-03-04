@@ -2,7 +2,6 @@
 #include <string.h>
 #include "book.h"
 
-#define MAX_BOOKS 1000
 #define MAX_LINE 1024
 
 //Global Variables
@@ -122,5 +121,151 @@ void searchBook() {
         printf("==============================================================================================================\n");
     } else {
         printf("No matching books found.\n");
+    } 
+}
+
+void addBook() {
+    
+    if (bookCount>= MAX_BOOKS){
+        printf("Library is now full.\n");
+        return;
     }
+
+    struct Book *newBook = &library[bookCount];
+
+    printf("Enter Book ID: ");
+    scanf("%d", &newBook->bookID);
+
+    printf("Enter Average Rating: ");
+    scanf("%d", &newBook->average_rating);
+
+    printf("Enter Number of Pages: ");
+    scanf("%d", &newBook->num_pages);
+
+    printf("Enter Ratings Count: ");
+    scanf("%d", &newBook->ratings_count);
+
+    printf("Enter Text Reviewers Count: ");
+    scanf("%d", &newBook->text_reviewers_count);
+
+    while (getchar() !='\n');
+
+    printf("Enter Title: ");
+    fgets(newBook->title, sizeof(newBook->title), stdin );
+    newBook->title[strcspn(newBook->title, "\n")]=0;
+
+    printf("Enter Authors: ");
+    fgets(newBook->authors, sizeof(newBook->authors), stdin);
+    newBook->authors[strcspn(newBook->authors, "\n")]=0;
+
+    printf("Enter ISBN: ");
+    scanf("%s", newBook->isbn);
+
+    printf("Enter ISBN13: ");
+    scanf("%s", newBook->isbn13);
+
+    printf("Enter Language Code: ");
+    scanf("%s", newBook->language_code);
+
+    printf("Enter Publication Date (YYYY-MM-DD): ");
+    scanf("%s", newBook->publication_date);
+
+    while(getchar() != '\n');
+
+    printf("Enter Publisher: ");
+    fgets(newBook->publisher, sizeof(newBook->publisher), stdin);
+    newBook->publisher[strcspn(newBook->publisher, "\n")]=0;
+
+    newBook->status = 0;
+    (bookCount)++;
+
+    FILE *file = fopen("books.csv", "a");
+    if(file==NULL){
+        printf("File 404\n");
+        return;
+    }
+    fprintf(file, "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
+            newBook->bookID,
+            newBook->title,
+            newBook->authors,
+            newBook->average_rating,
+            newBook->isbn,
+            newBook->isbn13,
+            newBook->language_code,
+            newBook->num_pages,
+            newBook->ratings_count,
+            newBook->text_reviewers_count,
+            newBook->publication_date,
+            newBook->publisher,
+            newBook->status);
+
+    fclose(file);
+
+    printf("\n>> Success: '%s' added\n", newBook->title);
+}
+void deleteBook(){
+    char searchTitle[200];
+    int foundIndex = -1;
+    char confirm;
+
+    if (bookCount ==0){
+        printf("Library is Empty.\n");
+        return;
+    }
+
+    printf("\nEnter the exact title of the book to be deleted: ");
+    while (getchar()!='\n');
+    fgets(searchTitle, sizeof(searchTitle), stdin);
+    searchTitle[strcspn(searchTitle, "\n")]=0;
+
+    for (int i = 0; i<bookCount; i++ ){
+        if(stricmp(searchTitle, library[i].title)==0){
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (foundIndex == -1){
+        printf("\nBook not Found.\n", searchTitle);
+        return;
+    }
+
+    struct Book *b = &library[foundIndex];
+    printf("\nDetails of Selected Book: \n");
+    printf("ID: %d\nTitle: %s\nAuthor: %s\nPublisher: %s\n", 
+            b->bookID, b->title, b->authors, b->publisher);
+    printf("------------------\n");
+
+    printf("Are you sure you want to delete this book? (y/n): ");
+    scanf(" %c", &confirm);
+
+    if (confirm == 'y' || confirm == 'Y') {
+       
+        for (int i = foundIndex; i < bookCount - 1; i++) {
+            library[i] = library[i + 1];
+        }
+        (bookCount)--;
+
+        FILE *file = fopen("books.csv", "w");
+        if (file == NULL) {
+            printf("File not Found\n");
+            return;
+        }
+
+        for (int i = 0; i < bookCount; i++) {
+            fprintf(file, "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
+                    library[i].bookID, library[i].title, library[i].authors,
+                    library[i].average_rating, library[i].isbn, library[i].isbn13,
+                    library[i].language_code, library[i].num_pages,
+                    library[i].ratings_count, library[i].text_reviewers_count,
+                    library[i].publication_date, library[i].publisher,
+                    library[i].status);
+        }
+        fclose(file);
+
+        printf("\n>> Success: Book deleted from memory and books.csv.\n");
+    } else {
+        printf("\n>> Deletion cancelled.\n");
+    }
+
 }

@@ -1,6 +1,6 @@
 #ifndef BOOK_H
 #define BOOK_H
-
+#define MAX_BOOKS 100000
 struct Book
 {
     int bookID;
@@ -18,14 +18,16 @@ struct Book
     int status; // 0 = Available, 1 = Borrowed
 };
 
+extern int bookCount;
+extern struct Book library[MAX_BOOKS];
+
 // Function Declarations
 void loadBooksFromFile(const char *filename);
 void displayBooks();
 void searchBook();
-void addBook(struct Book library[], int *currentCount, int id, const char *title,
-             const char *authors, float rating, const char *isbn,
-             const char *isbn13, const char *lang, int pages, int r_count, int rev_count, const char *pub_date,
-             const char *publisher);
+void addBook();
 void deleteBook();
+
+
 
 #endif

@@ -22,12 +22,12 @@ int main() {
         
         switch (choice)
         {
-            //case 1: addBook(); break;
+            case 1: addBook(); break;
             case 2: displayBooks(); break;
             case 3: searchBook(); break;
             //case 4: borrowBook(); break;
             //case 5: returnBook(); break;
-            //case 6: deleteBook(); break;
+            case 6: deleteBook(); break;
             case 7: printf("Exiting program.\n"); break;
             default: printf("Invalid choice. Please try again.\n");
         }
