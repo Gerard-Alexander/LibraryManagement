@@ -123,6 +123,111 @@ void searchBook() {
         printf("No matching books found.\n");
     } 
 }
+void borrowBook() {
+    int id;
+    int found = -1;
+
+    if (bookCount == 0) {
+        printf("Library is empty.\n");
+        return;
+    }
+
+    printf("Enter Book ID to borrow: ");
+    scanf("%d", &id);
+
+    for (int i = 0; i < bookCount; i++) {
+        if (library[i].bookID == id) {
+            found = i;
+            break;
+        }
+    }
+
+    if (found == -1) {
+        printf("Book not found.\n");
+        return;
+    }
+
+    if (library[found].status == 1) {
+        printf("Book is already borrowed.\n");
+        return;
+    }
+
+    library[found].status = 1;
+
+    // Rewrite file
+    FILE *file = fopen("books.csv", "w");
+    if (file == NULL) {
+        printf("Error updating file.\n");
+        return;
+    }
+
+    for (int i = 0; i < bookCount; i++) {
+        fprintf(file, "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
+                library[i].bookID, library[i].title, library[i].authors,
+                library[i].average_rating, library[i].isbn, library[i].isbn13,
+                library[i].language_code, library[i].num_pages,
+                library[i].ratings_count, library[i].text_reviewers_count,
+                library[i].publication_date, library[i].publisher,
+                library[i].status);
+    }
+
+    fclose(file);
+
+    printf(">> Success: '%s' borrowed successfully.\n", library[found].title);
+}
+
+void returnBook() {
+    int id;
+    int found = -1;
+
+    if (bookCount == 0) {
+        printf("Library is empty.\n");
+        return;
+    }
+
+    printf("Enter Book ID to return: ");
+    scanf("%d", &id);
+
+    for (int i = 0; i < bookCount; i++) {
+        if (library[i].bookID == id) {
+            found = i;
+            break;
+        }
+    }
+
+    if (found == -1) {
+        printf("Book not found.\n");
+        return;
+    }
+
+    if (library[found].status == 0) {
+        printf("Book is already available.\n");
+        return;
+    }
+
+    library[found].status = 0;
+
+    // Rewrite file
+    FILE *file = fopen("books.csv", "w");
+    if (file == NULL) {
+        printf("Error updating file.\n");
+        return;
+    }
+
+    for (int i = 0; i < bookCount; i++) {
+        fprintf(file, "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
+                library[i].bookID, library[i].title, library[i].authors,
+                library[i].average_rating, library[i].isbn, library[i].isbn13,
+                library[i].language_code, library[i].num_pages,
+                library[i].ratings_count, library[i].text_reviewers_count,
+                library[i].publication_date, library[i].publisher,
+                library[i].status);
+    }
+
+    fclose(file);
+
+    printf(">> Success: '%s' returned successfully.\n", library[found].title);
+}
 
 void addBook() {
     

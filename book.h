@@ -25,6 +25,8 @@ extern struct Book library[MAX_BOOKS];
 void loadBooksFromFile(const char *filename);
 void displayBooks();
 void searchBook();
+void borrowBook();
+void returnBook();
 void addBook();
 void deleteBook();
 
