@@ -133,8 +133,7 @@ void addBook() {
 
     struct Book *newBook = &library[bookCount];
 
-    printf("Enter Book ID: ");
-    scanf("%d", &newBook->bookID);
+   newBook->bookID=bookCount;
 
     printf("Enter Average Rating: ");
     scanf("%d", &newBook->average_rating);
