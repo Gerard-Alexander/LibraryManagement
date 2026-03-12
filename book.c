@@ -328,6 +328,32 @@ void returnBook() {
     printf(">> Success: '%s' returned successfully.\n", library[found].title);
 }
 
+void getValidatedISBN(char *dest, int requiredLen, const char *label) {
+    char buffer[100];
+    int isValid = 0;
+
+    while (!isValid) {
+        printf("Enter %s (%d digits): ", label, requiredLen);
+        if (scanf("%99s", buffer) != 1) continue;
+
+        if (strlen(buffer) != requiredLen) {
+            printf("ERROR: %s must be exactly %d digits.\n", label, requiredLen);
+            continue;
+        }
+
+        isValid = 1;
+        for (int i = 0; i < requiredLen; i++) {
+            if (!isdigit(buffer[i])) {
+                printf("ERROR: %s must contain only numbers.\n", label);
+                isValid = 0;
+                break;
+            }
+        }
+    }
+    strcpy(dest, buffer);
+    while (getchar() != '\n'); 
+}
+
 void addBook() {
 
     if (bookCount >= MAX_BOOKS) {
@@ -350,11 +376,8 @@ void addBook() {
     safeReadString("Enter Title: ", newBook->title, sizeof(newBook->title));
     safeReadString("Enter Authors: ", newBook->authors, sizeof(newBook->authors));
 
-    printf("Enter ISBN: ");
-    scanf("%19s", newBook->isbn);
-
-    printf("Enter ISBN13: ");
-    scanf("%19s", newBook->isbn13);
+    getValidatedISBN(newBook->isbn, 10, "ISBN");
+    getValidatedISBN(newBook->isbn13, 13, "ISBN13");
 
     printf("Enter Language Code: ");
     scanf("%9s", newBook->language_code);
@@ -394,6 +417,7 @@ void addBook() {
 
     printf("SUCCESS: '%s' added.\n", newBook->title);
 }
+
 void deleteBook(){
     char searchTitle[200];
     int foundIndex = -1;
