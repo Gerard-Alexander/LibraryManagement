@@ -8,44 +8,85 @@
 struct Book library[MAX_BOOKS];
 int bookCount = 0;
 
+int safeReadInt(const char *message, int *value) {
+    printf("%s", message);
+    
+    if (scanf("%d", value) != 1) {
+        printf("Invalid input. Please enter a valid number.\n");
+        while (getchar() != '\n'); // clear buffer
+        return 0;
+    }
+
+    return 1;
+}
+
+int safeReadFloat(const char *message, float *value) {
+    printf("%s", message);
+
+    if (scanf("%f", value) != 1) {
+        printf("Invalid input. Please enter a valid decimal number.\n");
+        while (getchar() != '\n');
+        return 0;
+    }
+
+    return 1;
+}
+
+void safeReadString(const char *message, char *buffer, int size) {
+    printf("%s", message);
+
+    while (getchar() != '\n'); 
+    fgets(buffer, size, stdin);
+    buffer[strcspn(buffer, "\n")] = 0;
+}
+
 //Load Books from CSV file
 void loadBooksFromFile(const char* filename) {
+
     FILE *file = fopen(filename, "r");
+
     if (file == NULL) {
-        printf("Could not open file.\n");
+        printf("ERROR: File '%s' could not be opened.\n", filename);
         return;
     }
 
     char line[MAX_LINE];
 
-    // Skip header
-    fgets(line, sizeof(line), file);
+    if (fgets(line, sizeof(line), file) == NULL) {
+        printf("ERROR: File is empty.\n");
+        fclose(file);
+        return;
+    }
 
-    while (fgets(line, sizeof(line), file) && bookCount < MAX_BOOKS) {
-    struct Book b;
+    while (fgets(line, sizeof(line), file)) {
 
-    if (sscanf(line, "%d,%199[^,],%199[^,],%f,%19[^,],%19[^,],%9[^,],%d,%d,%d,%19[^,],%99[^\n]",
-        &b.bookID,
-        b.title,
-        b.authors,
-        &b.average_rating,
-        b.isbn,
-        b.isbn13,
-        b.language_code,
-        &b.num_pages,
-        &b.ratings_count,
-        &b.text_reviewers_count,
-        b.publication_date,
-        b.publisher
-    ) == 12)   // Make sure parsing succeeded
-    {
+        if (bookCount >= MAX_BOOKS) {
+            printf("WARNING: Library capacity reached.\n");
+            break;
+        }
+
+        struct Book b;
+
+        int parsed = sscanf(line,
+            "%d,%199[^,],%199[^,],%f,%19[^,],%19[^,],%9[^,],%d,%d,%d,%19[^,],%99[^\n]",
+            &b.bookID, b.title, b.authors, &b.average_rating,
+            b.isbn, b.isbn13, b.language_code,
+            &b.num_pages, &b.ratings_count,
+            &b.text_reviewers_count,
+            b.publication_date, b.publisher);
+
+        if (parsed != 12) {
+            printf("WARNING: Skipping corrupted record.\n");
+            continue;
+        }
+
         b.status = 0;
         library[bookCount++] = b;
     }
-}
 
     fclose(file);
-    printf("Books loaded successfully! Total: %d\n", bookCount);
+
+    printf("Books loaded successfully. Total: %d\n", bookCount);
 }
 
 void displayBooks() {
@@ -124,16 +165,19 @@ void searchBook() {
     } 
 }
 void borrowBook() {
+
     int id;
-    int found = -1;
 
     if (bookCount == 0) {
-        printf("Library is empty.\n");
+        printf("ERROR: Library is empty.\n");
         return;
     }
 
-    printf("Enter Book ID to borrow: ");
-    scanf("%d", &id);
+    if (!safeReadInt("Enter Book ID to borrow: ", &id)) {
+        return;
+    }
+
+    int found = -1;
 
     for (int i = 0; i < bookCount; i++) {
         if (library[i].bookID == id) {
@@ -143,37 +187,51 @@ void borrowBook() {
     }
 
     if (found == -1) {
-        printf("Book not found.\n");
+        printf("ERROR: Book not found.\n");
         return;
     }
 
     if (library[found].status == 1) {
-        printf("Book is already borrowed.\n");
+        printf("ERROR: Book already borrowed.\n");
         return;
     }
 
     library[found].status = 1;
 
-    // Rewrite file
     FILE *file = fopen("books.csv", "w");
+
     if (file == NULL) {
-        printf("Error updating file.\n");
+        printf("ERROR: Unable to update file.\n");
         return;
     }
 
     for (int i = 0; i < bookCount; i++) {
-        fprintf(file, "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
-                library[i].bookID, library[i].title, library[i].authors,
-                library[i].average_rating, library[i].isbn, library[i].isbn13,
-                library[i].language_code, library[i].num_pages,
-                library[i].ratings_count, library[i].text_reviewers_count,
-                library[i].publication_date, library[i].publisher,
-                library[i].status);
+
+        if (fprintf(file,
+            "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
+            library[i].bookID,
+            library[i].title,
+            library[i].authors,
+            library[i].average_rating,
+            library[i].isbn,
+            library[i].isbn13,
+            library[i].language_code,
+            library[i].num_pages,
+            library[i].ratings_count,
+            library[i].text_reviewers_count,
+            library[i].publication_date,
+            library[i].publisher,
+            library[i].status) < 0) {
+
+            printf("ERROR: Failed writing to file.\n");
+            fclose(file);
+            return;
+        }
     }
 
     fclose(file);
 
-    printf(">> Success: '%s' borrowed successfully.\n", library[found].title);
+    printf("SUCCESS: '%s' borrowed.\n", library[found].title);
 }
 
 void returnBook() {
@@ -201,7 +259,7 @@ void returnBook() {
     }
 
     if (library[found].status == 0) {
-        printf("Book is already available.\n");
+        printf("You did not borrow this book or It is already returned.\n");
         return;
     }
 
@@ -230,83 +288,70 @@ void returnBook() {
 }
 
 void addBook() {
-    
-    if (bookCount>= MAX_BOOKS){
-        printf("Library is now full.\n");
+
+    if (bookCount >= MAX_BOOKS) {
+        printf("ERROR: Library is full.\n");
         return;
     }
 
     struct Book *newBook = &library[bookCount];
 
-    printf("Enter Book ID: ");
-    scanf("%d", &newBook->bookID);
+    if (!safeReadInt("Enter Book ID: ", &newBook->bookID)) return;
 
-    printf("Enter Average Rating: ");
-    scanf("%d", &newBook->average_rating);
+    if (!safeReadFloat("Enter Average Rating: ", &newBook->average_rating)) return;
 
-    printf("Enter Number of Pages: ");
-    scanf("%d", &newBook->num_pages);
+    if (!safeReadInt("Enter Number of Pages: ", &newBook->num_pages)) return;
 
-    printf("Enter Ratings Count: ");
-    scanf("%d", &newBook->ratings_count);
+    if (!safeReadInt("Enter Ratings Count: ", &newBook->ratings_count)) return;
 
-    printf("Enter Text Reviewers Count: ");
-    scanf("%d", &newBook->text_reviewers_count);
+    if (!safeReadInt("Enter Text Reviewers Count: ", &newBook->text_reviewers_count)) return;
 
-    while (getchar() !='\n');
-
-    printf("Enter Title: ");
-    fgets(newBook->title, sizeof(newBook->title), stdin );
-    newBook->title[strcspn(newBook->title, "\n")]=0;
-
-    printf("Enter Authors: ");
-    fgets(newBook->authors, sizeof(newBook->authors), stdin);
-    newBook->authors[strcspn(newBook->authors, "\n")]=0;
+    safeReadString("Enter Title: ", newBook->title, sizeof(newBook->title));
+    safeReadString("Enter Authors: ", newBook->authors, sizeof(newBook->authors));
 
     printf("Enter ISBN: ");
-    scanf("%s", newBook->isbn);
+    scanf("%19s", newBook->isbn);
 
     printf("Enter ISBN13: ");
-    scanf("%s", newBook->isbn13);
+    scanf("%19s", newBook->isbn13);
 
     printf("Enter Language Code: ");
-    scanf("%s", newBook->language_code);
+    scanf("%9s", newBook->language_code);
 
-    printf("Enter Publication Date (YYYY-MM-DD): ");
-    scanf("%s", newBook->publication_date);
+    printf("Enter Publication Date: ");
+    scanf("%19s", newBook->publication_date);
 
-    while(getchar() != '\n');
-
-    printf("Enter Publisher: ");
-    fgets(newBook->publisher, sizeof(newBook->publisher), stdin);
-    newBook->publisher[strcspn(newBook->publisher, "\n")]=0;
+    safeReadString("Enter Publisher: ", newBook->publisher, sizeof(newBook->publisher));
 
     newBook->status = 0;
-    (bookCount)++;
+    bookCount++;
 
     FILE *file = fopen("books.csv", "a");
-    if(file==NULL){
-        printf("File 404\n");
+
+    if (file == NULL) {
+        printf("ERROR: Could not open file.\n");
         return;
     }
-    fprintf(file, "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
-            newBook->bookID,
-            newBook->title,
-            newBook->authors,
-            newBook->average_rating,
-            newBook->isbn,
-            newBook->isbn13,
-            newBook->language_code,
-            newBook->num_pages,
-            newBook->ratings_count,
-            newBook->text_reviewers_count,
-            newBook->publication_date,
-            newBook->publisher,
-            newBook->status);
+
+    fprintf(file,
+        "%d,%s,\"%s\",%.2f,%s,%s,%s,%d,%d,%d,%s,\"%s\",%d\n",
+        newBook->bookID,
+        newBook->title,
+        newBook->authors,
+        newBook->average_rating,
+        newBook->isbn,
+        newBook->isbn13,
+        newBook->language_code,
+        newBook->num_pages,
+        newBook->ratings_count,
+        newBook->text_reviewers_count,
+        newBook->publication_date,
+        newBook->publisher,
+        newBook->status);
 
     fclose(file);
 
-    printf("\n>> Success: '%s' added\n", newBook->title);
+    printf("SUCCESS: '%s' added.\n", newBook->title);
 }
 void deleteBook(){
     char searchTitle[200];
@@ -315,6 +360,10 @@ void deleteBook(){
 
     if (bookCount ==0){
         printf("Library is Empty.\n");
+        return;
+    }
+    if (fgets(searchTitle, sizeof(searchTitle), stdin) == NULL) {
+        printf("ERROR: Failed reading input.\n");
         return;
     }
 
