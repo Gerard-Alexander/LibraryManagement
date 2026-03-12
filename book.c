@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "book.h"
 
 #define MAX_LINE 1024
@@ -112,34 +113,74 @@ void displayBooks() {
     printf("==============================================================================================================\n");
 }
 
+void toLowerCase(char *str) {
+    for (int i = 0; str[i]; i++) {
+        str[i] = tolower(str[i]);
+    }
+}
+int containsIgnoreCase(const char *text, const char *search) {
+    char tempText[500];
+    char tempSearch[200];
+
+    strcpy(tempText, text);
+    strcpy(tempSearch, search);
+
+    toLowerCase(tempText);
+    toLowerCase(tempSearch);
+
+    return strstr(tempText, tempSearch) != NULL;
+}
+int bookMatchesKeyword(int i, char *keyword) {
+
+    char idStr[20], pagesStr[20], ratingStr[20];
+
+    sprintf(idStr, "%d", library[i].bookID);
+    sprintf(pagesStr, "%d", library[i].num_pages);
+    sprintf(ratingStr, "%.2f", library[i].average_rating);
+
+    return
+        containsIgnoreCase(idStr, keyword) ||
+        containsIgnoreCase(library[i].title, keyword) ||
+        containsIgnoreCase(library[i].authors, keyword) ||
+        containsIgnoreCase(library[i].publisher, keyword) ||
+        containsIgnoreCase(library[i].isbn, keyword) ||
+        containsIgnoreCase(library[i].language_code, keyword) ||
+        containsIgnoreCase(ratingStr, keyword) ||
+        containsIgnoreCase(pagesStr, keyword);
+}
 //Search book
 void searchBook() {
+
     char input[200];
     int found = 0;
 
-    printf("\nEnter search keyword: ");
-    getchar(); // clear buffer if needed
+    printf("\nEnter search keywords: ");
+    getchar();
     fgets(input, sizeof(input), stdin);
     input[strcspn(input, "\n")] = 0;
 
+    char *keywords[20];
+    int keywordCount = 0;
+
+    char *token = strtok(input, " ");
+    while (token != NULL && keywordCount < 20) {
+        keywords[keywordCount++] = token;
+        token = strtok(NULL, " ");
+    }
+
     for (int i = 0; i < bookCount; i++) {
 
-        char idStr[20], pagesStr[20], ratingStr[20];
-        sprintf(idStr, "%d", library[i].bookID);
-        sprintf(pagesStr, "%d", library[i].num_pages);
-        sprintf(ratingStr, "%.2f", library[i].average_rating);
+        int matchAll = 1;
 
-        if (
-            strstr(idStr, input) != NULL ||
-            strstr(library[i].title, input) != NULL ||
-            strstr(library[i].authors, input) != NULL ||
-            strstr(library[i].publisher, input) != NULL ||
-            strstr(library[i].isbn, input) != NULL ||
-            strstr(library[i].language_code, input) != NULL ||
-            strstr(ratingStr, input) != NULL ||
-            strstr(pagesStr, input) != NULL
-        ) {
-            // Print header only once
+        for (int k = 0; k < keywordCount; k++) {
+            if (!bookMatchesKeyword(i, keywords[k])) {
+                matchAll = 0;
+                break;
+            }
+        }
+
+        if (matchAll) {
+
             if (!found) {
                 printf("\n==============================================================================================================\n");
                 printf("%-6s %-35s %-25s %-8s %-10s\n",
@@ -162,7 +203,7 @@ void searchBook() {
         printf("==============================================================================================================\n");
     } else {
         printf("No matching books found.\n");
-    } 
+    }
 }
 void borrowBook() {
 
