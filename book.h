@@ -1,8 +1,9 @@
 #ifndef BOOK_H
 #define BOOK_H
-#define MAX_BOOKS 100000
-struct Book
-{
+
+#define MAX_BOOKS 10000
+
+struct Book {
     int bookID;
     char title[200];
     char authors[200];
@@ -15,23 +16,11 @@ struct Book
     int text_reviewers_count;
     char publication_date[20];
     char publisher[100];
-    int status; // 0 = Available, 1 = Borrowed
+    int status; /* 0 = Available, 1 = Borrowed */
 };
 
-extern int bookCount;
+/* Global library state - defined in file_io.c */
 extern struct Book library[MAX_BOOKS];
-
-// Function Declarations
-void clearInputBuffer();
-void getLine(const char *prompt, char *buffer, int size);
-void loadBooksFromFile(const char *filename);
-void displayBooks();
-void searchBook();
-void borrowBook();
-void returnBook();
-void addBook();
-void deleteBook();
-
-
+extern int bookCount;
 
 #endif
