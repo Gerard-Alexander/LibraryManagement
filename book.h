@@ -22,6 +22,8 @@ extern int bookCount;
 extern struct Book library[MAX_BOOKS];
 
 // Function Declarations
+void clearInputBuffer();
+void getLine(const char *prompt, char *buffer, int size);
 void loadBooksFromFile(const char *filename);
 void displayBooks();
 void searchBook();

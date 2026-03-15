@@ -21,26 +21,6 @@ int safeReadInt(const char *message, int *value) {
     return 1;
 }
 
-int safeReadFloat(const char *message, float *value) {
-    printf("%s", message);
-
-    if (scanf("%f", value) != 1) {
-        printf("Invalid input. Please enter a valid decimal number.\n");
-        while (getchar() != '\n');
-        return 0;
-    }
-
-    return 1;
-}
-
-void safeReadString(const char *message, char *buffer, int size) {
-    printf("%s", message);
-
-    while (getchar() != '\n'); 
-    fgets(buffer, size, stdin);
-    buffer[strcspn(buffer, "\n")] = 0;
-}
-
 //Load Books from CSV file
 void loadBooksFromFile(const char* filename) {
 
@@ -208,6 +188,7 @@ void searchBook() {
 void borrowBook() {
 
     int id;
+    char confirm;
 
     if (bookCount == 0) {
         printf("ERROR: Library is empty.\n");
@@ -234,6 +215,17 @@ void borrowBook() {
 
     if (library[found].status == 1) {
         printf("ERROR: Book already borrowed.\n");
+        return;
+    }
+
+    printf("\nYou have selected:\n");
+    printf("ID: %d\nTitle: %s\nAuthor: %s\n", 
+           library[found].bookID, library[found].title, library[found].authors);
+    
+    printf("Confirm borrowing? (y/n): ");
+    scanf(" %c", &confirm);
+    if (confirm != 'y' && confirm != 'Y') {
+        printf("Borrowing cancelled.\n");
         return;
     }
 
@@ -278,14 +270,28 @@ void borrowBook() {
 void returnBook() {
     int id;
     int found = -1;
+    char confirm;
+    int borrowedCount = 0;
 
     if (bookCount == 0) {
         printf("Library is empty.\n");
         return;
     }
 
-    printf("Enter Book ID to return: ");
-    scanf("%d", &id);
+    printf("\n=== Borrowed Books ===\n");
+    printf("%-6s %-30s %-20s\n", "ID", "Title", "Author");
+    printf("------------------------------------------------------------\n");
+    for(int i=0; i<bookCount; i++) {
+        if(library[i].status == 1) {
+            printf("%-6d %-30.30s %-20.20s\n", library[i].bookID, library[i].title, library[i].authors);
+            borrowedCount++;
+        }
+    }
+    printf("------------------------------------------------------------\n");
+
+    if (!safeReadInt("Enter Book ID to return: ", &id)) {
+        return;
+    }
 
     for (int i = 0; i < bookCount; i++) {
         if (library[i].bookID == id) {
@@ -301,6 +307,16 @@ void returnBook() {
 
     if (library[found].status == 0) {
         printf("You did not borrow this book or It is already returned.\n");
+        return;
+    }
+
+    printf("\nYou are returning:\n");
+    printf("ID: %d\nTitle: %s\n", library[found].bookID, library[found].title);
+    
+    printf("Confirm return? (y/n): ");
+    scanf(" %c", &confirm);
+    if (confirm != 'y' && confirm != 'Y') {
+        printf("Return cancelled.\n");
         return;
     }
 
@@ -328,20 +344,90 @@ void returnBook() {
     printf(">> Success: '%s' returned successfully.\n", library[found].title);
 }
 
+void clearInputBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+void getLine(const char *prompt, char *buffer, int size) {
+    printf("%s", prompt);
+    if (fgets(buffer, size, stdin) != NULL) {
+        // If newline is not found, buffer was too small, so we need to clear the rest of the line.
+        if (strchr(buffer, '\n') == NULL) {
+            clearInputBuffer();
+        } else {
+            // Remove the newline character
+            buffer[strcspn(buffer, "\n")] = 0;
+        }
+    } else {
+        buffer[0] = '\0'; // Handle error
+    }
+}
+
+static void getValidatedFloatInRange(const char *prompt, float *value, float min, float max) {
+    char line[100];
+    while (1) {
+        getLine(prompt, line, sizeof(line));
+        if (line[0] == '\0') { // Handle empty input from getLine
+            printf("Input cannot be empty.\n");
+            continue;
+        }
+        if (sscanf(line, "%f", value) == 1 && *value >= min && *value <= max) {
+            return;
+        }
+        printf("Invalid input. Please enter a number between %.1f and %.1f.\n", min, max);
+    }
+}
+
+static void getValidatedIntPositive(const char *prompt, int *value) {
+    char line[100];
+    long long input;
+    while (1) {
+        getLine(prompt, line, sizeof(line));
+        if (line[0] == '\0') {
+            printf("Input cannot be empty.\n");
+            continue;
+        }
+        if (sscanf(line, "%lld", &input) == 1 && input >= 0 && input <= 2147483647) { // INT_MAX
+            *value = (int)input;
+            return;
+        }
+        printf("Invalid input. Please enter a non-negative integer.\n");
+    }
+}
+
+static void getValidatedIntInRange(const char *prompt, int *value, int min, int max) {
+    char line[100];
+    long long input;
+    while (1) {
+        getLine(prompt, line, sizeof(line));
+        if (line[0] == '\0') {
+            printf("Input cannot be empty.\n");
+            continue;
+        }
+        if (sscanf(line, "%lld", &input) == 1 && input >= min && input <= max) {
+            *value = (int)input;
+            return;
+        }
+        printf("Invalid input. Please enter an integer between %d and %d.\n", min, max);
+    }
+}
+
 void getValidatedISBN(char *dest, int requiredLen, const char *label) {
     char buffer[100];
-    int isValid = 0;
+    int isValid;
 
-    while (!isValid) {
+    do {
+        isValid = 1;
         printf("Enter %s (%d digits): ", label, requiredLen);
-        if (scanf("%99s", buffer) != 1) continue;
+        getLine("", buffer, sizeof(buffer));
 
         if (strlen(buffer) != requiredLen) {
             printf("ERROR: %s must be exactly %d digits.\n", label, requiredLen);
+            isValid = 0;
             continue;
         }
 
-        isValid = 1;
         for (int i = 0; i < requiredLen; i++) {
             if (!isdigit(buffer[i])) {
                 printf("ERROR: %s must contain only numbers.\n", label);
@@ -349,9 +435,21 @@ void getValidatedISBN(char *dest, int requiredLen, const char *label) {
                 break;
             }
         }
-    }
+    } while (!isValid);
     strcpy(dest, buffer);
-    while (getchar() != '\n'); 
+}
+
+static int get_next_book_id() {
+    if (bookCount == 0) {
+        return 1;
+    }
+    int max_id = 0;
+    for (int i = 0; i < bookCount; i++) {
+        if (library[i].bookID > max_id) {
+            max_id = library[i].bookID;
+        }
+    }
+    return max_id + 1;
 }
 
 void addBook() {
@@ -361,31 +459,26 @@ void addBook() {
         return;
     }
 
+    clearInputBuffer(); // Clear buffer from menu selection
+
     struct Book *newBook = &library[bookCount];
 
-   newBook->bookID=bookCount;
+    newBook->bookID = get_next_book_id();
 
-    if (!safeReadFloat("Enter Average Rating: ", &newBook->average_rating)) return;
+    getValidatedFloatInRange("Enter Average Rating (0.0-5.0): ", &newBook->average_rating, 0.0f, 5.0f);
+    getValidatedIntInRange("Enter Number of Pages (1-10000): ", &newBook->num_pages, 1, 10000);
+    getValidatedIntPositive("Enter Ratings Count (0 or more): ", &newBook->ratings_count);
+    getValidatedIntPositive("Enter Text Reviewers Count (0 or more): ", &newBook->text_reviewers_count);
 
-    if (!safeReadInt("Enter Number of Pages: ", &newBook->num_pages)) return;
-
-    if (!safeReadInt("Enter Ratings Count: ", &newBook->ratings_count)) return;
-
-    if (!safeReadInt("Enter Text Reviewers Count: ", &newBook->text_reviewers_count)) return;
-
-    safeReadString("Enter Title: ", newBook->title, sizeof(newBook->title));
-    safeReadString("Enter Authors: ", newBook->authors, sizeof(newBook->authors));
+    getLine("Enter Title: ", newBook->title, sizeof(newBook->title));
+    getLine("Enter Authors: ", newBook->authors, sizeof(newBook->authors));
 
     getValidatedISBN(newBook->isbn, 10, "ISBN");
     getValidatedISBN(newBook->isbn13, 13, "ISBN13");
 
-    printf("Enter Language Code: ");
-    scanf("%9s", newBook->language_code);
-
-    printf("Enter Publication Date: ");
-    scanf("%19s", newBook->publication_date);
-
-    safeReadString("Enter Publisher: ", newBook->publisher, sizeof(newBook->publisher));
+    getLine("Enter Language Code: ", newBook->language_code, sizeof(newBook->language_code));
+    getLine("Enter Publication Date (e.g., MM/DD/YYYY): ", newBook->publication_date, sizeof(newBook->publication_date));
+    getLine("Enter Publisher: ", newBook->publisher, sizeof(newBook->publisher));
 
     newBook->status = 0;
     bookCount++;
@@ -394,6 +487,7 @@ void addBook() {
 
     if (file == NULL) {
         printf("ERROR: Could not open file.\n");
+        bookCount--; // Roll back book count
         return;
     }
 
@@ -419,7 +513,7 @@ void addBook() {
 }
 
 void deleteBook(){
-    char searchTitle[200];
+    int searchID;
     int foundIndex = -1;
     char confirm;
 
@@ -427,25 +521,20 @@ void deleteBook(){
         printf("Library is Empty.\n");
         return;
     }
-    if (fgets(searchTitle, sizeof(searchTitle), stdin) == NULL) {
-        printf("ERROR: Failed reading input.\n");
+
+    if (!safeReadInt("\nEnter the Book ID to be deleted: ", &searchID)) {
         return;
     }
 
-    printf("\nEnter the exact title of the book to be deleted: ");
-    while (getchar()!='\n');
-    fgets(searchTitle, sizeof(searchTitle), stdin);
-    searchTitle[strcspn(searchTitle, "\n")]=0;
-
     for (int i = 0; i<bookCount; i++ ){
-        if(stricmp(searchTitle, library[i].title)==0){
+        if(library[i].bookID == searchID){
             foundIndex = i;
             break;
         }
     }
 
     if (foundIndex == -1){
-        printf("\nBook not Found.\n", searchTitle);
+        printf("\nBook with ID %d not found.\n", searchID);
         return;
     }
 
