@@ -21,6 +21,18 @@ int safeReadInt(const char *message, int *value) {
     return 1;
 }
 
+int safeReadLong(const char *message, long *value) {
+    printf("%s", message);
+    
+    if (scanf("%d", value) != 1) {
+        printf("Invalid input. Please enter a valid number.\n");
+        while (getchar() != '\n'); // clear buffer
+        return 0;
+    }
+
+    return 1;
+}
+
 //Load Books from CSV file
 void loadBooksFromFile(const char* filename) {
 
@@ -513,7 +525,7 @@ void addBook() {
 }
 
 void deleteBook(){
-    int searchID;
+    long searchID;
     int foundIndex = -1;
     char confirm;
 
@@ -522,7 +534,7 @@ void deleteBook(){
         return;
     }
 
-    if (!safeReadInt("\nEnter the Book ID to be deleted: ", &searchID)) {
+    if (!safeReadLong("\nEnter the Book ID to be deleted: ", &searchID)) {
         return;
     }
 
@@ -534,7 +546,7 @@ void deleteBook(){
     }
 
     if (foundIndex == -1){
-        printf("\nBook with ID %d not found.\n", searchID);
+        printf("\nBook with that ID not found.\n");
         return;
     }
 
