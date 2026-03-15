@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "book.h"
 
 #define MAX_LINE 1024
@@ -31,6 +32,23 @@ int safeReadLong(const char *message, long *value) {
     }
 
     return 1;
+}
+
+// Remove surrounding quotes from a string (used for CSV fields)
+void removeQuotes(char *str) {
+    int len;
+
+    /* remove leading quotes */
+    while (str[0] == '"') {
+        memmove(str, str + 1, strlen(str));
+    }
+
+    /* remove trailing quotes */
+    len = strlen(str);
+    while (len > 0 && str[len - 1] == '"') {
+        str[len - 1] = '\0';
+        len--;
+    }
 }
 
 //Load Books from CSV file
@@ -73,6 +91,14 @@ void loadBooksFromFile(const char* filename) {
             continue;
         }
 
+        removeQuotes(b.title);
+        removeQuotes(b.authors);
+        removeQuotes(b.isbn);
+        removeQuotes(b.isbn13);
+        removeQuotes(b.language_code);
+        removeQuotes(b.publication_date);
+        removeQuotes(b.publisher);
+
         b.status = 0;
         library[bookCount++] = b;
     }
@@ -110,36 +136,65 @@ void toLowerCase(char *str) {
         str[i] = tolower(str[i]);
     }
 }
+
 int containsIgnoreCase(const char *text, const char *search) {
     char tempText[500];
     char tempSearch[200];
 
-    strcpy(tempText, text);
-    strcpy(tempSearch, search);
+    strncpy(tempText, text, sizeof(tempText));
+    strncpy(tempSearch, search, sizeof(tempSearch));
+
+    tempText[sizeof(tempText)-1] = '\0';
+    tempSearch[sizeof(tempSearch)-1] = '\0';
 
     toLowerCase(tempText);
     toLowerCase(tempSearch);
 
     return strstr(tempText, tempSearch) != NULL;
 }
-int bookMatchesKeyword(int i, char *keyword) {
 
-    char idStr[20], pagesStr[20], ratingStr[20];
+int isNumber(const char *str) {
+    if (*str == '\0') return 0;
 
-    sprintf(idStr, "%d", library[i].bookID);
-    sprintf(pagesStr, "%d", library[i].num_pages);
-    sprintf(ratingStr, "%.2f", library[i].average_rating);
-
-    return
-        containsIgnoreCase(idStr, keyword) ||
-        containsIgnoreCase(library[i].title, keyword) ||
-        containsIgnoreCase(library[i].authors, keyword) ||
-        containsIgnoreCase(library[i].publisher, keyword) ||
-        containsIgnoreCase(library[i].isbn, keyword) ||
-        containsIgnoreCase(library[i].language_code, keyword) ||
-        containsIgnoreCase(ratingStr, keyword) ||
-        containsIgnoreCase(pagesStr, keyword);
+    for (int i = 0; str[i]; i++) {
+        if (!isdigit(str[i]))
+            return 0;
+    }
+    return 1;
 }
+
+int bookMatchesKeyword(int i, char *keyword) {
+    if (isNumber(keyword)) {
+
+        char idStr[20];
+        char pageStr[20];
+
+        sprintf(idStr, "%d", library[i].bookID);
+        sprintf(pageStr, "%d", library[i].num_pages);
+
+        if (strstr(idStr, keyword) != NULL)
+            return 1;
+
+        if (strstr(pageStr, keyword) != NULL)
+            return 1;
+
+        return 0;
+    }
+
+
+    else {
+        if (containsIgnoreCase(library[i].title, keyword))
+            return 1;
+        if (containsIgnoreCase(library[i].authors, keyword))
+            return 1;
+        if (containsIgnoreCase(library[i].status == 0 ? "Available" : "Borrowed", keyword))
+            return 1;
+        return 0;
+    }
+}
+
+
+
 //Search book
 void searchBook() {
 
@@ -147,9 +202,18 @@ void searchBook() {
     int found = 0;
 
     printf("\nEnter search keywords: ");
-    getchar();
+
+    /* Clear leftover input buffer */
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+
     fgets(input, sizeof(input), stdin);
-    input[strcspn(input, "\n")] = 0;
+    input[strcspn(input, "\n")] = '\0';
+
+    if (strlen(input) == 0) {
+        printf("Empty search.\n");
+        return;
+    }
 
     char *keywords[20];
     int keywordCount = 0;
@@ -162,16 +226,16 @@ void searchBook() {
 
     for (int i = 0; i < bookCount; i++) {
 
-        int matchAll = 1;
+        int match = 1;
 
         for (int k = 0; k < keywordCount; k++) {
             if (!bookMatchesKeyword(i, keywords[k])) {
-                matchAll = 0;
+                match = 0;
                 break;
             }
         }
 
-        if (matchAll) {
+        if (match) {
 
             if (!found) {
                 printf("\n==============================================================================================================\n");
@@ -191,12 +255,12 @@ void searchBook() {
         }
     }
 
-    if (found) {
+    if (found)
         printf("==============================================================================================================\n");
-    } else {
+    else
         printf("No matching books found.\n");
-    }
 }
+
 void borrowBook() {
 
     int id;
